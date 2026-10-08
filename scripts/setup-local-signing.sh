@@ -28,19 +28,37 @@ openssl req -x509 -newkey rsa:3072 -sha256 -days 1825 -nodes \
     -addext "extendedKeyUsage=codeSigning" \
     >/dev/null 2>&1
 
-P12_PASSWORD="$(openssl rand -hex 32)"
+P12_PASSWORD="$(openssl rand -hex 16)"
 
+# macOS Security.framework still expects older PKCS#12 MAC/PBE formats.
+# SHA-1/3DES apply ONLY to this temporary, randomly password-protected
+# Keychain transfer container; code signing itself still uses SHA-256.
 openssl pkcs12 -export \
     -inkey "$TMP/key.pem" \
     -in "$TMP/cert.pem" \
     -out "$TMP/identity.p12" \
+    -name "$CERT_NAME" \
     -keypbe PBE-SHA1-3DES \
     -certpbe PBE-SHA1-3DES \
-    -macalg sha256 \
+    -macalg sha1 \
     -passout "pass:$P12_PASSWORD"
+
+# Verify the container with the same password before handing it to macOS.
+openssl pkcs12 -in "$TMP/identity.p12" \
+    -noout \
+    -passin "pass:$P12_PASSWORD" \
+    >"$TMP/verify.log" 2>&1 || {
+        echo "ERROR: OpenSSL could not verify the generated PKCS#12."
+        cat "$TMP/verify.log"
+        exit 1
+    }
+
+echo "PKCS#12 format: SHA-1 MAC, SHA-1/3DES encrypted payload."
+echo "PKCS#12 integrity: verified."
 
 security import "$TMP/identity.p12" \
     -k "$KEYCHAIN" \
+    -f pkcs12 \
     -P "$P12_PASSWORD" \
     -T /usr/bin/codesign
 
