@@ -34,9 +34,13 @@ cp "$BIN_DIR/MacActionScheduler" \
 
 chmod +x "$APP/Contents/MacOS/MacActionScheduler"
 
-# Copy Swift Package Manager resource bundles.
-find "$BIN_DIR" -maxdepth 1 -type d -name '*.bundle' \
-    -exec cp -R {} "$APP/Contents/Resources/" \;
+# No third-party font bundles: the app uses the installed macOS SF font.
+# Intentionally do not copy stale SwiftPM resource bundles from older builds.
+if find "$APP/Contents" -type f \( -iname '*.ttf' -o -iname '*.otf' -o -iname '*.woff*' \) -print -quit | grep -q .; then
+    echo "ERROR: Font assets found in the app bundle; aborting release build."
+    exit 1
+fi
+echo "FONT POLICY: System San Francisco only; no font files bundled."
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
