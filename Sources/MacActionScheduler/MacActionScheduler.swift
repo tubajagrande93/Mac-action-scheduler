@@ -42,8 +42,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         } else {
-            // Visible when the user switches back to the app, but not key/front.
-            window.orderFront(nil)
+            // Never display our main window over a macOS authorization dialog.
+            // System-owned prompts cannot be assigned a level by this app.
+            window.orderOut(nil)
             permissions.checkAtStartup()
         }
     }
@@ -51,8 +52,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidBecomeActive(
         _ notification: Notification
     ) {
-        // Refresh silently when returning from System Settings.
-        AccessibilityPermissionService.shared.applicationBecameActive()
+        // When returning from System Settings, re-evaluate the CURRENT process
+        // identity and show the app only after every required permission is ready.
+        let permissions = AccessibilityPermissionService.shared
+        permissions.applicationBecameActive()
+        if permissions.snapshot.ready, let window, !window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -67,8 +73,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         _ sender: NSApplication,
         hasVisibleWindows flag: Bool
     ) -> Bool {
-        window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        let permissions = AccessibilityPermissionService.shared
+        if permissions.refreshSilently() {
+            window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            // A Dock reopen during onboarding must not cover System Settings.
+            permissions.openAccessibilitySettings()
+        }
         return true
     }
 
