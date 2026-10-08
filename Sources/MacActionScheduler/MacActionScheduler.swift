@@ -9,9 +9,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
 
-        // Register bundled OpenAI Sans fonts before creating the GUI.
-        OpenAIFont.register()
-
         let contentView = ContentView(scheduler: scheduler)
 
         let window = NSWindow(
