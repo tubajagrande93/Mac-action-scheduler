@@ -29,6 +29,16 @@ fi
 
 cp "$ICON_SOURCE"    "$APP/Contents/Resources/MacActionScheduler.icns"
 
+# Include the complete README and personal-use license in every .app bundle
+# before signing so both documents are part of the signed resource seal.
+for DOC in README.md LICENSE; do
+    if [[ ! -s "$PWD/$DOC" ]]; then
+        echo "ERROR: Required distribution document missing or empty: $DOC" >&2
+        exit 1
+    fi
+    cp "$PWD/$DOC" "$APP/Contents/Resources/$DOC"
+done
+
 cp "$BIN_DIR/MacActionScheduler" \
    "$APP/Contents/MacOS/MacActionScheduler"
 
