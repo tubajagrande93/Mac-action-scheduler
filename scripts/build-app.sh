@@ -6,10 +6,22 @@ cd "$(dirname "$0")/.."
 APP_NAME="Mac Action Scheduler"
 BUNDLE_ID="com.ntstudio.MacActionScheduler"
 
-echo "Building Swift application..."
-swift build -c debug --product MacActionScheduler
+# Normal packaged builds use the optimized configuration. Override for
+# development with `SWIFT_CONFIGURATION=debug ./scripts/build-app.sh`.
+SWIFT_CONFIGURATION="${SWIFT_CONFIGURATION:-release}"
 
-BIN_DIR="$(swift build -c debug --show-bin-path)"
+case "$SWIFT_CONFIGURATION" in
+    debug|release) ;;
+    *)
+        echo "ERROR: SWIFT_CONFIGURATION must be 'debug' or 'release' (got '$SWIFT_CONFIGURATION')." >&2
+        exit 2
+        ;;
+esac
+
+echo "Building Swift application ($SWIFT_CONFIGURATION)..."
+swift build -c "$SWIFT_CONFIGURATION" --product MacActionScheduler
+
+BIN_DIR="$(swift build -c "$SWIFT_CONFIGURATION" --show-bin-path)"
 APP="$PWD/dist/$APP_NAME.app"
 
 echo "Creating macOS app bundle..."
