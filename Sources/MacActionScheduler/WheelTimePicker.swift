@@ -148,10 +148,7 @@ private struct InertialWheelColumn: View {
                 // Project the release velocity into a bounded spin.
                 let rawMomentum = predicted - current
 
-                let momentum = max(
-                    -12,
-                    min(12, rawMomentum)
-                ) * 0.82
+                let momentum = WheelMath.momentum(rawMomentum)
 
                 let destination = (
                     current + momentum
@@ -220,22 +217,11 @@ private struct InertialWheelColumn: View {
     }
 
     private func nearestOffset(to number: Int) -> CGFloat {
-        let circumference = CGFloat(count)
-        let half = circumference / 2
-
-        var delta = CGFloat(number) - position
-        delta = (delta + half)
-            .truncatingRemainder(dividingBy: circumference)
-
-        if delta < 0 {
-            delta += circumference
-        }
-
-        return delta - half
+        WheelMath.signedOffset(from: position, to: number, count: count)
     }
 
     private func wrapped(_ number: Int) -> Int {
-        ((number % count) + count) % count
+        WheelMath.wrapped(number, count: count)
     }
 }
 
@@ -255,7 +241,7 @@ private struct SpinningCylinder: View, @MainActor Animatable {
 
     var body: some View {
         ZStack {
-            ForEach(0..<count, id: \.self) { index in
+            ForEach(visibleIndices, id: \.self) { index in
                 cylinderRow(index)
             }
         }
@@ -272,6 +258,19 @@ private struct SpinningCylinder: View, @MainActor Animatable {
                 startPoint: .top,
                 endPoint: .bottom
             )
+        )
+    }
+
+    private var visibleIndices: [Int] {
+        // Rows become fully transparent at ~3.45 rows from center (opacity
+        // `1 - distance * 0.29` clamps to zero), so ±5 covers every row that
+        // can be visible while skipping far-off rows the original loop kept
+        // alive but painted fully transparent.
+        let radius = 5
+        return WheelMath.visibleIndices(
+            center: WheelMath.wrapped(Int(position.rounded()), count: count),
+            radius: radius,
+            count: count
         )
     }
 
@@ -317,18 +316,6 @@ private struct SpinningCylinder: View, @MainActor Animatable {
     }
 
     private func relativePosition(_ index: Int) -> CGFloat {
-        let circumference = CGFloat(count)
-        let half = circumference / 2
-
-        var delta = CGFloat(index) - position
-
-        delta = (delta + half)
-            .truncatingRemainder(dividingBy: circumference)
-
-        if delta < 0 {
-            delta += circumference
-        }
-
-        return delta - half
+        WheelMath.signedOffset(from: position, to: index, count: count)
     }
 }
