@@ -20,7 +20,9 @@ struct ContentView: View {
     @State private var selectedHour: Int
     @State private var selectedMinute: Int
 
-    init() {
+    init(scheduler: ClickScheduler) {
+        self.scheduler = scheduler
+
         let initial = Date().addingTimeInterval(300)
         let calendar = Calendar.current
 
