@@ -9,10 +9,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "MacActionScheduler",
-            resources: [
-                .copy("Resources/Fonts")
-            ]
+            name: "MacActionScheduler"
         ),
         .testTarget(
             name: "MacActionSchedulerTests",
