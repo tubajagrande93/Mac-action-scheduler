@@ -47,13 +47,21 @@ final class AccessibilityPermissionService: ObservableObject {
         )
         if current != snapshot {
             snapshot = current
+            recordDiagnostics(current)
         }
+        return current.ready
+    }
+
+    // Diagnostic keys are written only when the observed permission state
+    // changes, so rapid preflight checks no longer rewrite UserDefaults on
+    // every call. `AXIsProcessTrusted()` / `CGPreflightPostEventAccess()`
+    // remain the authoritative source; these keys exist for support debugging.
+    private func recordDiagnostics(_ current: PermissionSnapshot) {
         let defaults = UserDefaults.standard
         defaults.set(current.accessibility, forKey: "MAS_AXTrusted")
         defaults.set(current.postEvents, forKey: "MAS_PostEventGranted")
         defaults.set(Date().timeIntervalSince1970, forKey: "MAS_LastCheckUnix")
         defaults.set(Bundle.main.bundleIdentifier ?? "unknown", forKey: "MAS_BundleID")
-        return current.ready
     }
 
     func checkAtStartup() {

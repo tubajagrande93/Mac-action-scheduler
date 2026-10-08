@@ -134,9 +134,7 @@ struct ContentView: View {
             // Action button
             Button {
                 if permissions.refreshSilently() {
-                    if permissions.snapshot.ready {
-                        scheduleClick()
-                    }
+                    scheduleClick()
                 } else {
                     permissions.openAccessibilitySettings()
                 }

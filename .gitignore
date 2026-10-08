@@ -1,22 +1,36 @@
+# macOS
 .DS_Store
+
+# SwiftPM build artifacts
 /.build
 /Packages
-xcuserdata/
-DerivedData/
 .swiftpm/configuration/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
-.netrc
-Assets/fonts/
-.font-convert-venv/
-Sources/MacActionScheduler/Resources/Fonts/*.ttf
-Sources/MacActionScheduler/Resources/Fonts/*.otf
 
-Sources/MacActionScheduler/Resources/Fonts/*
+# Xcode
+xcuserdata/
+DerivedData/
 
-!Sources/MacActionScheduler/Resources/Fonts/.keep
-
-*.backup
+# Build output
 dist/
 
+# Fonts: the app uses the installed macOS SF font; never bundle font files.
+Assets/fonts/
+.font-convert-venv/
+Sources/MacActionScheduler/Resources/Fonts/*
+!Sources/MacActionScheduler/Resources/Fonts/.keep
+
+# Secrets and signing material (never commit private keys or identities).
+*.p12
+*.pem
+*.key
+*.p8
+*.mobileprovision
+.env
+.env.*
+
+# Misc
+.netrc
+*.backup
 .local-backups/
 .icon-tools-venv/

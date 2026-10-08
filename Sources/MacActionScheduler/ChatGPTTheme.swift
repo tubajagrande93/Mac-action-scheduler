@@ -51,7 +51,7 @@ enum ChatGPTTheme {
         scheme == .dark ? Color(hex: "343434") : Color(hex: "E5E7EB")
     }
 
-    // Samo glavni CTA/status surface
+    // Primary call-to-action surface.
     static func actionSurface(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? Color.white : Color(hex: "E7E7EA")
     }
