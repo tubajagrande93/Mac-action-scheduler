@@ -2,6 +2,12 @@
 
 A compact native macOS utility that schedules **one left mouse click** at a screen position and time chosen by the user.
 
+**[Download v0.2.0 — Universal macOS DMG](https://github.com/tubajagrande93/Mac-action-scheduler/releases/download/v0.2.0/Mac-Action-Scheduler-0.2.0-macOS-universal.dmg)** · [Release notes](https://github.com/tubajagrande93/Mac-action-scheduler/releases/tag/v0.2.0)
+
+**Compatibility:** macOS 14+, Intel (`x86_64`) and Apple Silicon (`arm64`). Free for permitted noncommercial uses; this release is not Apple notarized.
+
+**SHA-256:** `ca62122f4fb5c06fe6fb99911763dcb041b217e694f5c40f83c6da4c6587be7a`
+
 **Status:** Free for noncommercial use and sharing under the license below. Builds made from this repository are not Apple Developer ID notarized.
 
 ## Features
@@ -62,7 +68,7 @@ The free package is **not Apple-notarized** and does not use an Apple Developer 
 
 For official guidance see [Apple: Safely open apps on your Mac](https://support.apple.com/102445).
 
-To share a DMG, attach it to a GitHub Release (the repository must be public for non-collaborators to download it), or use your preferred file-sharing service. Include the SHA-256 hash and keep README/LICENSE with the app.
+The official download is available from [GitHub Releases](https://github.com/tubajagrande93/Mac-action-scheduler/releases/tag/v0.2.0). Verify the downloaded DMG against the SHA-256 hash above. The license and README are also included in the package.
 
 ## Usage and limitations
 
@@ -88,7 +94,7 @@ The full terms in [LICENSE](LICENSE) control if this summary differs. Publishing
 
 ## Copyright and attribution
 
-Copyright © 2026 **Nemanja Tubić (NT Studio)**. All rights reserved except as expressly licensed.
+Copyright © 2026 **Nemanja Tubić ([NT Studio](https://ntstudio.hr))**. All rights reserved except as expressly licensed.
 
 The application icon can accompany copies and modified versions redistributed under the software license; unrelated use of the project's name or branding is not separately authorized. macOS, Apple, and San Francisco are Apple trademarks or technologies; this app is an independent third-party project.
 
