@@ -2,7 +2,7 @@
 
 A compact native macOS utility that schedules **one left mouse click** at a screen position and time chosen by the user.
 
-**Status:** Personal-use project. The repository is currently private; the publicly downloadable and notarized installer is not yet available.
+**Status:** Free for noncommercial use and free sharing under the license below. The repository is currently private; a public notarized installer is not yet available.
 
 ## Features
 
@@ -51,19 +51,20 @@ Do not rely on this app for safety-critical operations or tasks requiring guaran
 
 ## License
 
-**Free personal/noncommercial use only**, under the [PolyForm Strict License 1.0.0](LICENSE). This is a **source-available, non-open-source** license.
+**Free noncommercial use and free sharing**, under the [PolyForm Noncommercial License 1.0.0](LICENSE). This is a **source-available, non-OSI-open-source** license.
 
-- You may use the unmodified software for noncommercial purposes, including personal projects.
-- The license **does not grant permission** to sell, sublicense, redistribute, or release modified versions of the software.
-- Commercial use, commercial distribution, and alternative distribution rights require separate written authorization from the copyright holder.
+- You may download and use the software for personal and other purposes permitted by the license, without paying a license fee.
+- You may **share copies for free** and redistribute the software for noncommercial purposes, provided you include the license terms (or their URL) and required copyright notices.
+- You may modify and redistribute modified versions for noncommercial purposes, following the license conditions.
+- **Selling the software or distributing it commercially is not authorized.** Commercial use requires separate permission from the copyright holder.
 
-The full terms in [LICENSE](LICENSE) control if this summary differs. A public GitHub repository does not itself grant additional software permissions.
+The full terms in [LICENSE](LICENSE) control if this summary differs. Publishing the repository does not waive the copyright owner's rights.
 
 ## Copyright and attribution
 
 Copyright © 2026 **Nemanja Tubić (NT Studio)**. All rights reserved except as expressly licensed.
 
-The icon and project branding are included as part of this application; no independent reuse rights are granted by the software license. macOS, Apple, and San Francisco are Apple trademarks or technologies; this app is an independent third-party project.
+The application icon can accompany copies and modified versions redistributed under the software license; unrelated use of the project's name or branding is not separately authorized. macOS, Apple, and San Francisco are Apple trademarks or technologies; this app is an independent third-party project.
 
 ## Documentation included in the app
 
