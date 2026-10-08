@@ -29,16 +29,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.title = "Mac Action Scheduler"
         window.contentView = NSHostingView(rootView: contentView)
         window.center()
-        window.makeKeyAndOrderFront(nil)
         window.isReleasedWhenClosed = false
         window.delegate = self
 
         self.window = window
 
-        NSApp.activate(ignoringOtherApps: true)
-
-        // Preflight before any automation can be scheduled.
-        AccessibilityPermissionService.shared.checkAtStartup()
+        // Do not raise the main window over macOS permission dialogs.
+        // Request trust only after the application window has been created.
+        let permissions = AccessibilityPermissionService.shared
+        let ready = permissions.refreshSilently()
+        if ready {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            // Visible when the user switches back to the app, but not key/front.
+            window.orderFront(nil)
+            permissions.checkAtStartup()
+        }
     }
 
     func applicationDidBecomeActive(
