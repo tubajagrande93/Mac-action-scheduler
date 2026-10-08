@@ -15,7 +15,7 @@ struct WheelTimePicker: View {
             )
 
             Text(":")
-                .font(OpenAIFont.font(.semibold, size: 21))
+                .font(AppTypography.font(.semibold, size: 21))
                 .foregroundStyle(ChatGPTTheme.muted(scheme))
                 .frame(width: 12)
                 .padding(.bottom, 13)
@@ -96,7 +96,7 @@ private struct InertialWheelColumn: View {
             }
 
             Text(title)
-                .font(OpenAIFont.font(.medium, size: 10))
+                .font(AppTypography.font(.medium, size: 10))
                 .foregroundStyle(
                     ChatGPTTheme.muted(scheme)
                 )
@@ -295,7 +295,7 @@ private struct SpinningCylinder: View, @MainActor Animatable {
         )
 
         return Text(String(format: "%02d", index))
-            .font(OpenAIFont.font(.medium, size: 22))
+            .font(AppTypography.font(.medium, size: 22))
             .monospacedDigit()
             .foregroundStyle(
                 ChatGPTTheme.text(scheme)
