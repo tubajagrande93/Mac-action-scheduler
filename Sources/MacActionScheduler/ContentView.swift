@@ -9,6 +9,7 @@ private enum DateMode {
 
 struct ContentView: View {
     @ObservedObject var scheduler: ClickScheduler
+    @ObservedObject private var permissions = AccessibilityPermissionService.shared
     @State private var selectedPoint: CGPoint?
     @State private var pickerController: CoordinatePickerController?
 
@@ -166,23 +167,27 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 Button {
-                    scheduleClick()
+                    if permissions.snapshot.ready {
+                        scheduleClick()
+                    } else {
+                        permissions.openAccessibilitySettings()
+                    }
                 } label: {
-                    Text("Schedule Click")
+                    Text(permissions.snapshot.ready ? "Schedule Click" : "Open Permissions")
                         .font(OpenAIFont.font(.semibold, size: 13))
                         .foregroundStyle(
-                            canSchedule ? Color.white : Color.primary
+                            (permissions.snapshot.ready && !canSchedule) ? Color.primary : Color.white
                         )
                         .frame(width: 174, height: 34)
                         .background(
-                            canSchedule
+                            (!permissions.snapshot.ready || canSchedule)
                                 ? Color.accentColor
                                 : Color.primary.opacity(0.10)
                         )
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(!canSchedule)
+                .disabled(permissions.snapshot.ready && !canSchedule)
                 .padding(.bottom, 16)
 
                 VStack(spacing: 2) {
@@ -463,6 +468,10 @@ struct ContentView: View {
         case .idle: break
         }
 
+        if !permissions.snapshot.ready {
+            return "PERMISSIONS REQUIRED"
+        }
+
         guard let scheduledDateTime else {
             return "INVALID TIME"
         }
@@ -473,6 +482,10 @@ struct ContentView: View {
     }
 
     private var schedulePreview: String {
+        if case .idle = scheduler.state, !permissions.snapshot.ready {
+            return permissions.snapshot.missingDescription
+        }
+
         if let job = scheduler.lastJob, shouldShowLastJob {
             let calendar = Calendar.current
             let date = job.fireDate
