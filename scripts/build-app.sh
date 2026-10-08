@@ -19,6 +19,16 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 mkdir -p "$APP/Contents/Resources"
 
+ICON_SOURCE="$PWD/Assets/MacActionScheduler.icns"
+
+if [[ ! -f "$ICON_SOURCE" ]]; then
+    echo "ERROR: App icon missing."
+    echo "Run: bash scripts/generate-app-icon.sh"
+    exit 1
+fi
+
+cp "$ICON_SOURCE"    "$APP/Contents/Resources/MacActionScheduler.icns"
+
 cp "$BIN_DIR/MacActionScheduler" \
    "$APP/Contents/MacOS/MacActionScheduler"
 
@@ -45,6 +55,9 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 
     <key>CFBundleDisplayName</key>
     <string>$APP_NAME</string>
+
+    <key>CFBundleIconFile</key>
+    <string>MacActionScheduler.icns</string>
 
     <key>CFBundlePackageType</key>
     <string>APPL</string>
