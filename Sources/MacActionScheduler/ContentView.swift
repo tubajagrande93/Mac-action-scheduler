@@ -41,13 +41,13 @@ struct ContentView: View {
             // Header
             VStack(spacing: 3) {
                 Text("Mac Action Scheduler")
-                    .font(OpenAIFont.font(.semibold, size: 22))
+                    .font(AppTypography.font(.semibold, size: 22))
                     .lineLimit(1)
                     .minimumScaleFactor(0.9)
                     .foregroundStyle(ChatGPTTheme.text(colorScheme))
 
                 Text("Simple native macOS automation.")
-                    .font(OpenAIFont.font(.regular, size: 12))
+                    .font(AppTypography.font(.regular, size: 12))
                     .foregroundStyle(ChatGPTTheme.muted(colorScheme))
             }
             .frame(maxWidth: .infinity)
@@ -60,7 +60,7 @@ struct ContentView: View {
             // Target
             VStack(spacing: 10) {
                 Label("Target", systemImage: "scope")
-                    .font(OpenAIFont.font(.semibold, size: 15))
+                    .font(AppTypography.font(.semibold, size: 15))
                     .foregroundStyle(ChatGPTTheme.text(colorScheme))
 
                 HStack(spacing: 20) {
@@ -79,7 +79,7 @@ struct ContentView: View {
                     selectPoint()
                 } label: {
                     Label("Select Point", systemImage: "cursorarrow.click")
-                        .font(OpenAIFont.font(.medium, size: 15))
+                        .font(AppTypography.font(.medium, size: 15))
                         .foregroundStyle(ChatGPTTheme.text(colorScheme))
                 }
                 .buttonStyle(.plain)
@@ -89,7 +89,7 @@ struct ContentView: View {
             // Schedule
             VStack(spacing: 10) {
                 Label("Schedule", systemImage: "clock")
-                    .font(OpenAIFont.font(.semibold, size: 15))
+                    .font(AppTypography.font(.semibold, size: 15))
                     .foregroundStyle(ChatGPTTheme.text(colorScheme))
 
                 HStack(spacing: 16) {
@@ -117,7 +117,7 @@ struct ContentView: View {
                 }
 
                 Text("Time")
-                    .font(OpenAIFont.font(.medium, size: 12))
+                    .font(AppTypography.font(.medium, size: 12))
                     .foregroundStyle(ChatGPTTheme.muted(colorScheme))
                     .padding(.top, 2)
 
@@ -142,7 +142,7 @@ struct ContentView: View {
                 }
             } label: {
                 Text(permissions.snapshot.ready ? "Schedule Click" : "Open Permissions")
-                    .font(OpenAIFont.font(.semibold, size: 13))
+                    .font(AppTypography.font(.semibold, size: 13))
                     .foregroundStyle(
                         (permissions.snapshot.ready && !canSchedule)
                         ? ChatGPTTheme.disabledText(colorScheme)
@@ -164,11 +164,11 @@ struct ContentView: View {
             // Status
             VStack(spacing: 2) {
                 Text(scheduleStatus)
-                    .font(OpenAIFont.font(.medium, size: 10))
+                    .font(AppTypography.font(.medium, size: 10))
                     .foregroundStyle(ChatGPTTheme.muted(colorScheme))
 
                 Text(schedulePreview)
-                    .font(OpenAIFont.font(.medium, size: 12))
+                    .font(AppTypography.font(.medium, size: 12))
                     .foregroundStyle(ChatGPTTheme.text(colorScheme))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
@@ -192,7 +192,7 @@ struct ContentView: View {
             .padding(.bottom, 12)
         }
         .padding(.horizontal, 20)
-        .font(OpenAIFont.font(.regular, size: 14))
+        .font(AppTypography.font(.regular, size: 14))
         .foregroundStyle(ChatGPTTheme.text(colorScheme))
         .frame(width: 360, height: 450, alignment: .top)
         .background(ChatGPTTheme.page(colorScheme))
@@ -214,7 +214,7 @@ struct ContentView: View {
                 } ?? "—"
             )
             .monospacedDigit()
-            .font(OpenAIFont.font(.medium, size: 14))
+            .font(AppTypography.font(.medium, size: 14))
             .foregroundStyle(ChatGPTTheme.text(colorScheme))
             .frame(minWidth: 42)
         }
@@ -256,7 +256,7 @@ struct ContentView: View {
                     }
 
                     Text(title)
-                        .font(OpenAIFont.font(.medium, size: 12))
+                        .font(AppTypography.font(.medium, size: 12))
                         .lineLimit(1)
                 }
                 .foregroundStyle(
