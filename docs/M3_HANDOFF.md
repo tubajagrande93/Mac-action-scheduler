@@ -25,7 +25,9 @@
 ## Changes (file-by-file)
 
 - `scripts/build-app.sh` — release by default with a validated `SWIFT_CONFIGURATION`.
-- `scripts/install-local-app.sh` — running-app preflight, staged copy + validation + backup/restore.
+- `scripts/install-local-app.sh` — running-app preflight, staged copy + validation + backup/restore (delegates the swap to `install-lib.sh`).
+- `scripts/install-lib.sh` — **new** reusable swap/restore core with overridable verification/running probes.
+- `scripts/test-install-local-app.sh` — **new** isolated installer failure-path tests (temp dirs only).
 - `Sources/MacActionScheduler/WheelMath.swift` — **new** pure wheel math (wrap, shortest offset, momentum, visible indices).
 - `Sources/MacActionScheduler/WheelTimePicker.swift` — bounded rendering + uses `WheelMath`; behavior preserved.
 - `Sources/MacActionScheduler/AppTypography.swift` — removed unused faces.
@@ -60,6 +62,8 @@ Result: **PASS** — 9 tests (3 pre-existing timing rules + 6 new: future thresh
 due/fresh boundaries, wheel wrap, shortest offset, momentum clamp, visible indices).
 No live `CGEvent`s are posted.
 
+Installer: `bash scripts/test-install-local-app.sh` → **PASS (15/15 assertions)**.
+
 ## Packaging verification
 
 - `bash scripts/build-app.sh` → `dist/Mac Action Scheduler.app`
@@ -78,6 +82,29 @@ No live `CGEvent`s are posted.
   Developer ID / notarized distribution.
 - LICENSE not chosen (unresolved public-release decision).
 
+## Installer safety correction (follow-up)
+
+An independent review found two installer gaps in `scripts/install-local-app.sh`,
+now fixed:
+
+1. **Restore on final-verification failure / interrupted installs.** The swap is
+   driven by `scripts/install-lib.sh` with explicit `MAS_BACKED_UP` /
+   `MAS_SWAPPED` / `MAS_FINALIZED` state. The backup is deleted **only after**
+   the installed bundle passes final verification; on any failure (including a
+   signal mid-install, handled via the `EXIT` trap) the previous app is restored,
+   never deleted.
+2. **Repeat the running-process check immediately before the swap.** The check now
+   runs once before the build (fast-fail) and again right before the target is
+   replaced, closing the build-time TOCTOU race.
+
+The swap/restore logic was extracted into `scripts/install-lib.sh` (overridable
+`mas_verify_app` / `mas_is_installed_app_running` probes) so it is testable
+without real code signing or a real running app. The current code-signing
+identity and the Click Engine are unchanged.
+
+`scripts/test-install-local-app.sh` runs isolated failure-path tests entirely in
+`mktemp` temporary directories (the real installed app is never touched).
+
 ## Git
 
 - Branch: `refactor/m3-code-hygiene-performance`
@@ -85,4 +112,5 @@ No live `CGEvent`s are posted.
   - `d2497d0` build: release packaging and safe install
   - `1f6b0fb` refactor: remove verified dead code and redundant checks
   - `2762161` perf: bounded wheel rendering with tests
-  - (docs commit adds `README.md` and this file)
+  - `184d424` docs: build and public readiness
+  - (correction commit: installer safety fixes + isolated failure-path tests)
