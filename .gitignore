@@ -19,3 +19,4 @@ Sources/MacActionScheduler/Resources/Fonts/*
 dist/
 
 .local-backups/
+.icon-tools-venv/
