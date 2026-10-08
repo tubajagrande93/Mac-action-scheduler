@@ -2,7 +2,8 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    private let scheduler = ClickScheduler()
     private var window: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -11,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Register bundled OpenAI Sans fonts before creating the GUI.
         OpenAIFont.register()
 
-        let contentView = ContentView()
+        let contentView = ContentView(scheduler: scheduler)
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 450),
@@ -30,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.center()
         window.makeKeyAndOrderFront(nil)
         window.isReleasedWhenClosed = false
+        window.delegate = self
 
         self.window = window
 
@@ -46,10 +48,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AccessibilityPermissionService.shared.refreshSilently()
     }
 
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if scheduler.hasPendingClick {
+            sender.orderOut(nil)
+            return false
+        }
+        return true
+    }
+
+    func applicationShouldHandleReopen(
+        _ sender: NSApplication,
+        hasVisibleWindows flag: Bool
+    ) -> Bool {
+        window?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        return true
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(
         _ sender: NSApplication
     ) -> Bool {
-        true
+        !scheduler.hasPendingClick
     }
 }
 
