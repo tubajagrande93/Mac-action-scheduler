@@ -39,55 +39,40 @@ enum ChatGPTTheme {
         scheme == .dark ? Color(hex: "212121") : Color(hex: "F7F7F8")
     }
 
-    static func window(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "212121") : Color.white
-    }
-
-    static func card(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "2A2A2A") : Color.white
-    }
-
-    static func softField(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "2F2F2F") : Color(hex: "F4F4F5")
-    }
-
-    static func border(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "3A3A3A") : Color(hex: "E5E7EB")
-    }
-
-    static func divider(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "343434") : Color(hex: "E5E7EB")
-    }
-
     static func text(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "F5F5F5") : Color(hex: "111827")
+        scheme == .dark ? Color.white : Color(hex: "0F172A")
     }
 
     static func muted(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? Color(hex: "A1A1AA") : Color(hex: "6B7280")
     }
 
-    static func primaryFill(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white : Color(hex: "171717")
+    static func divider(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "343434") : Color(hex: "E5E7EB")
     }
 
-    static func primaryText(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.black : Color.white
+    // Samo glavni CTA/status surface
+    static func actionSurface(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.white : Color(hex: "E7E7EA")
     }
 
-    static func secondaryFill(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "2F2F2F") : Color(hex: "F4F4F5")
+    static func actionText(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.black : Color(hex: "111827")
     }
 
-    static func secondaryText(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white : Color(hex: "111827")
+    static func disabledSurface(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "2C2C2C") : Color(hex: "F0F0F2")
     }
 
-    static func selectedPillFill(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.white : Color(hex: "171717")
+    static func disabledText(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color(hex: "777777") : Color(hex: "9CA3AF")
     }
 
-    static func selectedPillText(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color.black : Color.white
+    static func selectedText(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.white : Color.black
+    }
+
+    static func selectedUnderline(_ scheme: ColorScheme) -> Color {
+        scheme == .dark ? Color.white : Color.black
     }
 }

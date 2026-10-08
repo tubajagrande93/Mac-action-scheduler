@@ -11,13 +11,13 @@ struct ContentView: View {
     @ObservedObject var scheduler: ClickScheduler
     @ObservedObject private var permissions = AccessibilityPermissionService.shared
     @Environment(\.colorScheme) private var colorScheme
+
     @State private var selectedPoint: CGPoint?
     @State private var pickerController: CoordinatePickerController?
 
     @State private var dateMode: DateMode = .today
     @State private var selectedDate = Date()
     @State private var showCalendar = false
-    @State private var openTimePicker: String?
 
     @State private var selectedHour: Int
     @State private var selectedMinute: Int
@@ -38,14 +38,12 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-
-            // MARK: Header
-
+            // Header
             VStack(spacing: 3) {
                 Text("Mac Action Scheduler")
                     .font(OpenAIFont.font(.semibold, size: 22))
                     .lineLimit(1)
-                     .minimumScaleFactor(0.9)
+                    .minimumScaleFactor(0.9)
                     .foregroundStyle(ChatGPTTheme.text(colorScheme))
 
                 Text("Simple native macOS automation.")
@@ -59,55 +57,46 @@ struct ContentView: View {
             Divider()
                 .overlay(ChatGPTTheme.divider(colorScheme))
 
-            // MARK: Target
-
-            VStack(spacing: 9) {
+            // Target
+            VStack(spacing: 10) {
                 Label("Target", systemImage: "scope")
                     .font(OpenAIFont.font(.semibold, size: 15))
+                    .foregroundStyle(ChatGPTTheme.text(colorScheme))
 
-                HStack(spacing: 18) {
+                HStack(spacing: 20) {
                     coordinateValue("X", value: selectedPoint?.x)
 
                     Rectangle()
-                        .fill(Color.primary.opacity(0.12))
-                        .frame(width: 1, height: 18)
+                        .fill(ChatGPTTheme.divider(colorScheme))
+                        .frame(width: 1, height: 16)
 
                     coordinateValue("Y", value: selectedPoint?.y)
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 36)
-                .background(ChatGPTTheme.softField(colorScheme))
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 10)
-                )
+                .frame(height: 26)
 
                 Button {
                     selectPoint()
                 } label: {
-                    Label(
-                        "Select Point",
-                        systemImage: "cursorarrow.click.2"
-                    )
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 32)
-                    .background(ChatGPTTheme.secondaryFill(colorScheme))
-                    .clipShape(Capsule())
+                    Label("Select Point", systemImage: "cursorarrow.click")
+                        .font(OpenAIFont.font(.medium, size: 15))
+                        .foregroundStyle(ChatGPTTheme.text(colorScheme))
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 10)
+            .padding(.top, 12)
 
-            // MARK: Schedule
-
+            // Schedule
             VStack(spacing: 10) {
                 Label("Schedule", systemImage: "clock")
                     .font(OpenAIFont.font(.semibold, size: 15))
+                    .foregroundStyle(ChatGPTTheme.text(colorScheme))
 
-                HStack(spacing: 7) {
-                    datePill("Today", mode: .today)
-                    datePill("Tomorrow", mode: .tomorrow)
+                HStack(spacing: 16) {
+                    dateTab("Today", mode: .today)
+                    dateTab("Tomorrow", mode: .tomorrow)
 
-                    datePill("Select date", mode: .custom)
+                    dateTab("Select date", mode: .custom)
                         .popover(
                             isPresented: $showCalendar,
                             arrowEdge: .bottom
@@ -127,121 +116,85 @@ struct ContentView: View {
                         }
                 }
 
-                VStack(spacing: 0) {
-                    Text("Time")
-                        .font(OpenAIFont.font(.medium, size: 12))
-                        .foregroundStyle(.secondary)
+                Text("Time")
+                    .font(OpenAIFont.font(.medium, size: 12))
+                    .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                    .padding(.top, 2)
 
-                    HStack(alignment: .top, spacing: 8) {
-                        timeMenu(
-                            value: selectedHour,
-                            title: "HOURS",
-                            range: 0..<24
-                        ) { value in
-                            selectedHour = value
-                        }
-
-                        Text(":")
-                            .font(OpenAIFont.font(.semibold, size: 22))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 12, height: 34)
-
-                        timeMenu(
-                            value: selectedMinute,
-                            title: "MINUTES",
-                            range: 0..<60
-                        ) { value in
-                            selectedMinute = value
-                        }
-                    }
-                    .frame(
-                        maxWidth: .infinity,
-                        alignment: .center
-                    )
-                    .padding(.top, 12)
-                }
+                WheelTimePicker(
+                    hour: $selectedHour,
+                    minute: $selectedMinute
+                )
+                .padding(.top, -2)
             }
             .padding(.top, 12)
-            .frame(maxWidth: .infinity)
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 6)
 
-            // MARK: Action and Status
-
-            VStack(spacing: 8) {
-                Button {
-                    // Never act on a stale permission snapshot.
-                    if permissions.refreshSilently() {
-                        if permissions.snapshot.ready {
-                            scheduleClick()
-                        }
-                    } else {
-                        permissions.openAccessibilitySettings()
+            // Action button
+            Button {
+                if permissions.refreshSilently() {
+                    if permissions.snapshot.ready {
+                        scheduleClick()
                     }
-                } label: {
-                    Text(permissions.snapshot.ready ? "Schedule Click" : "Open Permissions")
-                        .font(OpenAIFont.font(.semibold, size: 13))
-                        .foregroundStyle(
-                            (permissions.snapshot.ready && !canSchedule) ? ChatGPTTheme.muted(colorScheme) : ChatGPTTheme.primaryText(colorScheme)
-                        )
-                        .frame(width: 174, height: 34)
-                        .background(
-                            (!permissions.snapshot.ready || canSchedule)
-                                ? ChatGPTTheme.primaryFill(colorScheme)
-                                : ChatGPTTheme.secondaryFill(colorScheme)
-                        )
-                        .clipShape(Capsule())
+                } else {
+                    permissions.openAccessibilitySettings()
                 }
-                .buttonStyle(.plain)
-                .disabled(permissions.snapshot.ready && !canSchedule)
-                .padding(.bottom, 16)
+            } label: {
+                Text(permissions.snapshot.ready ? "Schedule Click" : "Open Permissions")
+                    .font(OpenAIFont.font(.semibold, size: 13))
+                    .foregroundStyle(
+                        (permissions.snapshot.ready && !canSchedule)
+                        ? ChatGPTTheme.disabledText(colorScheme)
+                        : ChatGPTTheme.actionText(colorScheme)
+                    )
+                    .frame(width: 182, height: 34)
+                    .background(
+                        (permissions.snapshot.ready && !canSchedule)
+                        ? ChatGPTTheme.disabledSurface(colorScheme)
+                        : ChatGPTTheme.actionSurface(colorScheme)
+                    )
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(permissions.snapshot.ready && !canSchedule)
 
-                VStack(spacing: 2) {
-                    Text(scheduleStatus)
-                        .font(OpenAIFont.font(.medium, size: 10))
-                        .foregroundStyle(.secondary)
+            Spacer(minLength: 10)
 
-                    Text(schedulePreview)
-                        .font(OpenAIFont.font(.medium, size: 12))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(ChatGPTTheme.softField(colorScheme))
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 10)
-                )
-                .overlay(alignment: .trailing) {
-                    if scheduler.canCancel {
-                        Button {
-                            cancelActiveSchedule()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 26, height: 26)
-                                .background(Color.primary.opacity(0.07))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .help("Cancel scheduled click")
-                        .accessibilityLabel("Cancel scheduled click")
-                        .padding(.trailing, 10)
-                    }
-                }
+            // Status
+            VStack(spacing: 2) {
+                Text(scheduleStatus)
+                    .font(OpenAIFont.font(.medium, size: 10))
+                    .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+
+                Text(schedulePreview)
+                    .font(OpenAIFont.font(.medium, size: 12))
+                    .foregroundStyle(ChatGPTTheme.text(colorScheme))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
             .frame(maxWidth: .infinity)
+            .frame(height: 40)
+            .overlay(alignment: .trailing) {
+                if scheduler.canCancel {
+                    Button {
+                        cancelActiveSchedule()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                            .frame(width: 24, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, 10)
+                }
+            }
             .padding(.bottom, 12)
         }
         .padding(.horizontal, 20)
         .font(OpenAIFont.font(.regular, size: 14))
         .foregroundStyle(ChatGPTTheme.text(colorScheme))
-        .frame(
-            width: 360,
-            height: 450,
-            alignment: .top
-        )
+        .frame(width: 360, height: 450, alignment: .top)
         .background(ChatGPTTheme.page(colorScheme))
     }
 
@@ -251,9 +204,9 @@ struct ContentView: View {
         _ axis: String,
         value: CGFloat?
     ) -> some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 6) {
             Text("\(axis):")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(ChatGPTTheme.muted(colorScheme))
 
             Text(
                 value.map {
@@ -262,13 +215,14 @@ struct ContentView: View {
             )
             .monospacedDigit()
             .font(OpenAIFont.font(.medium, size: 14))
-            .frame(minWidth: 44)
+            .foregroundStyle(ChatGPTTheme.text(colorScheme))
+            .frame(minWidth: 42)
         }
     }
 
-    // MARK: Date Selection
+    // MARK: Date tabs
 
-    private func datePill(
+    private func dateTab(
         _ title: String,
         mode: DateMode
     ) -> some View {
@@ -294,142 +248,35 @@ struct ContentView: View {
                 showCalendar = true
             }
         } label: {
-            HStack(spacing: 4) {
-                if active {
-                    Image(systemName: "checkmark")
-                        .font(.system(
-                            size: 10,
-                            weight: .bold
-                        ))
-                }
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    if active {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 9, weight: .bold))
+                    }
 
-                Text(title)
-                    .font(OpenAIFont.font(.medium, size: 12))
-                    .lineLimit(1)
+                    Text(title)
+                        .font(OpenAIFont.font(.medium, size: 12))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(
+                    active
+                    ? ChatGPTTheme.selectedText(colorScheme)
+                    : ChatGPTTheme.muted(colorScheme)
+                )
+
+                Rectangle()
+                    .fill(
+                        active
+                        ? ChatGPTTheme.selectedUnderline(colorScheme)
+                        : Color.clear
+                    )
+                    .frame(height: 1.5)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 34)
-            .foregroundStyle(
-                active ? ChatGPTTheme.selectedPillText(colorScheme) : ChatGPTTheme.secondaryText(colorScheme)
-            )
-            .background(
-                active
-                    ? ChatGPTTheme.selectedPillFill(colorScheme)
-                    : ChatGPTTheme.secondaryFill(colorScheme)
-            )
-            .clipShape(Capsule())
+            .frame(height: 24)
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: Hours / Minutes
-
-    private func timeMenu(
-        value: Int,
-        title: String,
-        range: Range<Int>,
-        onSelect: @escaping (Int) -> Void
-    ) -> some View {
-
-        let isOpen = Binding<Bool>(
-            get: {
-                openTimePicker == title
-            },
-            set: { showing in
-                if !showing {
-                    openTimePicker = nil
-                }
-            }
-        )
-
-        return VStack(spacing: 4) {
-
-            Button {
-                openTimePicker = title
-            } label: {
-                HStack(spacing: 8) {
-                    Text(String(format: "%02d", value))
-                        .font(OpenAIFont.font(.medium, size: 22))
-                        .monospacedDigit()
-
-                    Image(systemName: "chevron.down")
-                        .font(.system(
-                            size: 10,
-                            weight: .semibold
-                        ))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: 100, height: 34)
-                .background(
-                    ChatGPTTheme.secondaryFill(colorScheme)
-                )
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .popover(
-                isPresented: isOpen,
-                arrowEdge: .bottom
-            ) {
-                ScrollView {
-                    LazyVGrid(
-                        columns: Array(
-                            repeating: GridItem(
-                                .fixed(40),
-                                spacing: 6
-                            ),
-                            count: 6
-                        ),
-                        spacing: 6
-                    ) {
-                        ForEach(range, id: \.self) { number in
-                            Button {
-                                onSelect(number)
-                                openTimePicker = nil
-                            } label: {
-                                Text(
-                                    String(
-                                        format: "%02d",
-                                        number
-                                    )
-                                )
-                                .font(
-                                    OpenAIFont.font(
-                                        .medium,
-                                        size: 13
-                                    )
-                                )
-                                .foregroundStyle(
-                                    number == value
-                                        ? ChatGPTTheme.primaryText(colorScheme)
-                                        : ChatGPTTheme.text(colorScheme)
-                                )
-                                .frame(width: 40, height: 34)
-                                .background(
-                                    number == value
-                                        ? ChatGPTTheme.primaryFill(colorScheme)
-                                        : ChatGPTTheme.secondaryFill(colorScheme)
-                                )
-                                .clipShape(
-                                    RoundedRectangle(
-                                        cornerRadius: 8
-                                    )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(12)
-                }
-                .frame(
-                    width: 302,
-                    height: title == "HOURS" ? 184 : 242
-                )
-            }
-
-            Text(title)
-                .font(OpenAIFont.font(.medium, size: 10))
-                .foregroundStyle(.secondary)
-        }
     }
 
     // MARK: Date Calculation
@@ -461,7 +308,8 @@ struct ContentView: View {
     }
 
     private var canSchedule: Bool {
-        selectedPoint != nil && !scheduler.hasPendingClick &&
+        selectedPoint != nil &&
+        !scheduler.hasPendingClick &&
         (scheduledDateTime.map { ClickTimingPolicy.isInFuture($0, now: Date()) } ?? false)
     }
 
