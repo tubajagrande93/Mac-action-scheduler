@@ -6,10 +6,26 @@ cd "$(dirname "$0")/.."
 APP_NAME="Mac Action Scheduler"
 BUNDLE_ID="com.ntstudio.MacActionScheduler"
 
-echo "Building optimized Swift application (release)..."
-swift build -c release --product MacActionScheduler
+# Normal builds retain the locally tested architecture and signing identity.
+# For a shareable Intel + Apple Silicon executable, set MAS_UNIVERSAL=1.
+BUILD_ARGS=(-c release)
+if [[ "${MAS_UNIVERSAL:-0}" == "1" ]]; then
+    BUILD_ARGS+=(--build-system swiftbuild --arch arm64 --arch x86_64)
+    echo "Building Universal macOS application (arm64 + x86_64)..."
+else
+    echo "Building optimized Swift application (release)..."
+fi
 
-BIN_DIR="$(swift build -c release --show-bin-path)"
+swift build "${BUILD_ARGS[@]}" --product MacActionScheduler
+BIN_DIR="$(swift build "${BUILD_ARGS[@]}" --show-bin-path)"
+
+if [[ "${MAS_UNIVERSAL:-0}" == "1" ]]; then
+    ARCHS="$(lipo -archs "$BIN_DIR/MacActionScheduler")"
+    [[ " $ARCHS " == *" arm64 "* && " $ARCHS " == *" x86_64 "* ]] || {
+        echo "ERROR: Universal build did not contain both architectures: $ARCHS" >&2
+        exit 1
+    }
+fi
 APP="$PWD/dist/$APP_NAME.app"
 
 echo "Creating macOS app bundle..."
