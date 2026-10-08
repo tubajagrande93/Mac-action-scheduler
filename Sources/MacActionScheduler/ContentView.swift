@@ -7,15 +7,11 @@ private enum DateMode {
     case custom
 }
 
-private struct ScheduledAction {
-    let fireDate: Date
-    let cancel: () -> Void
-}
-
 struct ContentView: View {
+    @ObservedObject var scheduler: ClickScheduler
+    @ObservedObject private var permissions = AccessibilityPermissionService.shared
     @State private var selectedPoint: CGPoint?
     @State private var pickerController: CoordinatePickerController?
-    @State private var activeSchedule: ScheduledAction?
 
     @State private var dateMode: DateMode = .today
     @State private var selectedDate = Date()
@@ -25,7 +21,9 @@ struct ContentView: View {
     @State private var selectedHour: Int
     @State private var selectedMinute: Int
 
-    init() {
+    init(scheduler: ClickScheduler) {
+        self.scheduler = scheduler
+
         let initial = Date().addingTimeInterval(300)
         let calendar = Calendar.current
 
@@ -169,23 +167,30 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 Button {
-                    // Scheduler engine connects in the next step.
+                    // Never act on a stale permission snapshot.
+                    if permissions.refreshSilently() {
+                        if permissions.snapshot.ready {
+                            scheduleClick()
+                        }
+                    } else {
+                        permissions.openAccessibilitySettings()
+                    }
                 } label: {
-                    Text("Schedule Click")
+                    Text(permissions.snapshot.ready ? "Schedule Click" : "Open Permissions")
                         .font(OpenAIFont.font(.semibold, size: 13))
                         .foregroundStyle(
-                            canSchedule ? Color.white : Color.primary
+                            (permissions.snapshot.ready && !canSchedule) ? Color.primary : Color.white
                         )
                         .frame(width: 174, height: 34)
                         .background(
-                            canSchedule
+                            (!permissions.snapshot.ready || canSchedule)
                                 ? Color.accentColor
                                 : Color.primary.opacity(0.10)
                         )
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .disabled(!canSchedule)
+                .disabled(permissions.snapshot.ready && !canSchedule)
                 .padding(.bottom, 16)
 
                 VStack(spacing: 2) {
@@ -205,7 +210,7 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 10)
                 )
                 .overlay(alignment: .trailing) {
-                    if activeSchedule != nil {
+                    if scheduler.canCancel {
                         Button {
                             cancelActiveSchedule()
                         } label: {
@@ -451,13 +456,23 @@ struct ContentView: View {
     }
 
     private var canSchedule: Bool {
-        selectedPoint != nil &&
-        (scheduledDateTime.map { $0 > Date() } ?? false)
+        selectedPoint != nil && !scheduler.hasPendingClick &&
+        (scheduledDateTime.map { ClickTimingPolicy.isInFuture($0, now: Date()) } ?? false)
     }
 
     private var scheduleStatus: String {
-        if activeSchedule != nil {
-            return "SCHEDULED"
+        switch scheduler.state {
+        case .scheduled: return "SCHEDULED"
+        case .sending: return "SENDING CLICK"
+        case .sent: return "CLICK SENT"
+        case .cancelled: return "CANCELLED"
+        case .missed: return "MISSED (MAC WAS ASLEEP)"
+        case .failed: return "FAILED"
+        case .idle: break
+        }
+
+        if !permissions.snapshot.ready {
+            return "PERMISSIONS REQUIRED"
         }
 
         guard let scheduledDateTime else {
@@ -470,7 +485,11 @@ struct ContentView: View {
     }
 
     private var schedulePreview: String {
-        if let job = activeSchedule {
+        if case .idle = scheduler.state, !permissions.snapshot.ready {
+            return permissions.snapshot.missingDescription
+        }
+
+        if let job = scheduler.lastJob, shouldShowLastJob {
             let calendar = Calendar.current
             let date = job.fireDate
 
@@ -515,14 +534,20 @@ struct ContentView: View {
         }
     }
 
-    // MARK: Schedule Cancellation
+    // MARK: Schedule Engine
+
+    private var shouldShowLastJob: Bool {
+        if case .idle = scheduler.state { return false }
+        return true
+    }
+
+    private func scheduleClick() {
+        guard let point = selectedPoint, let time = scheduledDateTime else { return }
+        _ = scheduler.schedule(point: point, at: time)
+    }
 
     private func cancelActiveSchedule() {
-        guard let job = activeSchedule else { return }
-
-        // Cancel the actual scheduled operation first.
-        job.cancel()
-        activeSchedule = nil
+        scheduler.cancel()
     }
 
     // MARK: Coordinate Picker

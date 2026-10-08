@@ -69,19 +69,30 @@ plutil -lint "$APP/Contents/Info.plist"
 
 echo "Signing application..."
 
-SIGN_IDENTITY="$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development:[^"]*\)".*/\1/p' | head -n 1)"
+LOCAL_NAME="Mac Action Scheduler Local Code Signing"
 
-if [[ -n "$SIGN_IDENTITY" ]]; then
-    codesign --force --sign "$SIGN_IDENTITY" "$APP"
-    echo "Signed with Apple Development identity."
+# Prefer the stable local identity for consistent macOS TCC recognition.
+LOCAL_SHA="$(security find-identity -v -p codesigning | awk -v name="\"$LOCAL_NAME\"" 'index($0, name) { print $2; exit }')"
+APPLE_SHA="$(security find-identity -v -p codesigning | awk '/"Apple Development:/ { print $2; exit }')"
+
+if [[ -n "$LOCAL_SHA" ]]; then
+    codesign --force --timestamp=none --sign "$LOCAL_SHA" "$APP"
+    echo "SIGNED: Stable local certificate ($LOCAL_NAME)"
+elif [[ -n "$APPLE_SHA" ]]; then
+    codesign --force --timestamp=none --sign "$APPLE_SHA" "$APP"
+    echo "SIGNED: Apple Development identity"
 else
     codesign --force --sign - "$APP"
-    echo "WARNING: Ad-hoc signing used."
-    echo "Accessibility permission may need renewal after rebuild."
+    echo "WARNING: No code-signing identity found; ad-hoc signature used."
+    echo "For stable Accessibility permission, run:"
+    echo "  bash scripts/setup-local-signing.sh"
 fi
 
 echo "Verifying signature..."
 codesign --verify --verbose=2 "$APP"
+
+codesign -dv --verbose=4 "$APP" 2>&1 | grep -E "Identifier=|Signature=|Authority=|TeamIdentifier=" || true
+codesign -dr - "$APP" 2>&1 | tail -n 3
 
 echo ""
 echo "BUILD COMPLETE"
