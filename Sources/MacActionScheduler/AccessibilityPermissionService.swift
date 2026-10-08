@@ -1,164 +1,108 @@
 import AppKit
 import ApplicationServices
+import Combine
 import CoreGraphics
 
-@MainActor
-final class AccessibilityPermissionService {
+struct PermissionSnapshot: Equatable {
+    let accessibility: Bool
+    let postEvents: Bool
 
+    var ready: Bool { accessibility && postEvents }
+
+    var missingDescription: String {
+        switch (accessibility, postEvents) {
+        case (false, false):
+            return "Accessibility + Click access missing"
+        case (false, true):
+            return "Accessibility access missing"
+        case (true, false):
+            return "Mouse click access missing"
+        case (true, true):
+            return "Permissions granted"
+        }
+    }
+}
+
+@MainActor
+final class AccessibilityPermissionService: ObservableObject {
     static let shared = AccessibilityPermissionService()
 
-    private(set) var granted = false
-    private var didRequest = false
-    private var didShowSetup = false
+    @Published private(set) var snapshot = PermissionSnapshot(
+        accessibility: false,
+        postEvents: false
+    )
+
+    private var requestedAccessibility = false
+    private var requestedPostEvents = false
 
     private init() {}
 
-    // MARK: - Silent permission preflight
-
+    // Truthfully records BOTH results from the current signed process.
+    // Does not interpret the System Settings toggle as authorization.
     @discardableResult
     func refreshSilently() -> Bool {
-        let accessibility = AXIsProcessTrusted()
-        let postEvents = CGPreflightPostEventAccess()
-
-        granted = accessibility && postEvents
-        return granted
+        let current = PermissionSnapshot(
+            accessibility: AXIsProcessTrusted(),
+            postEvents: CGPreflightPostEventAccess()
+        )
+        if current != snapshot {
+            snapshot = current
+        }
+        let defaults = UserDefaults.standard
+        defaults.set(current.accessibility, forKey: "MAS_AXTrusted")
+        defaults.set(current.postEvents, forKey: "MAS_PostEventGranted")
+        defaults.set(Date().timeIntervalSince1970, forKey: "MAS_LastCheckUnix")
+        defaults.set(Bundle.main.bundleIdentifier ?? "unknown", forKey: "MAS_BundleID")
+        return current.ready
     }
 
-    // MARK: - Application startup
+    func checkAtStartup() {
+        guard !refreshSilently() else { return }
+        requestNextMissingPermission()
+    }
 
-    func checkAtStartup(in window: NSWindow) {
-        // Already approved: absolutely no UI.
-        guard !refreshSilently() else {
-            print("PERMISSIONS: READY")
+    func applicationBecameActive() {
+        let previouslyGrantedAX = snapshot.accessibility
+        let ready = refreshSilently()
+        if !ready && !previouslyGrantedAX && snapshot.accessibility {
+            // The user returned with AX granted: request post-event access,
+            // if it still needs a separate confirmation.
+            requestNextMissingPermission()
+        }
+    }
+
+    // At most ONE new system request per pass. Never stack AX + CG
+    // permission requests and an NSAlert in the same launch.
+    private func requestNextMissingPermission() {
+        guard !snapshot.ready else { return }
+
+        if !snapshot.accessibility && !requestedAccessibility {
+            requestedAccessibility = true
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+            _ = AXIsProcessTrustedWithOptions(options)
             return
         }
 
-        print("PERMISSIONS: ACCESS REQUIRED")
-
-        requestMissingPermissions()
-
-        // Give macOS a chance to show its native prompt.
-        // No polling or busy-wait loop.
-        Task { @MainActor [weak self, weak window] in
-            try? await Task.sleep(for: .seconds(1.5))
-
-            guard let self,
-                  let window,
-                  !self.refreshSilently()
-            else {
-                return
-            }
-
-            self.presentSetupSheet(in: window)
-        }
-    }
-
-    // MARK: - Native macOS permission requests
-
-    private func requestMissingPermissions() {
-        guard !didRequest else { return }
-        didRequest = true
-
-        if !CGPreflightPostEventAccess() {
-            print("REQUEST: CoreGraphics Post Event Access")
+        if snapshot.accessibility && !snapshot.postEvents && !requestedPostEvents {
+            requestedPostEvents = true
             _ = CGRequestPostEventAccess()
         }
-
-        if !AXIsProcessTrusted() {
-            print("REQUEST: Accessibility")
-
-            // Stable CoreFoundation option key.
-            // Avoid Swift 6 concurrency access to the C global.
-            let options = [
-                "AXTrustedCheckOptionPrompt": true
-            ] as CFDictionary
-
-            _ = AXIsProcessTrustedWithOptions(options)
-        }
     }
-
-    // MARK: - Guaranteed onboarding fallback
-
-    private func presentSetupSheet(in window: NSWindow) {
-        guard !didShowSetup,
-              !refreshSilently()
-        else {
-            return
-        }
-
-        didShowSetup = true
-
-        let alert = NSAlert()
-        alert.alertStyle = .informational
-
-        alert.messageText =
-            "Accessibility Access Required"
-
-        alert.informativeText = """
-        Mac Action Scheduler needs permission to \
-        control your Mac before it can execute \
-        scheduled mouse clicks.
-
-        Enable access in System Settings > \
-        Privacy & Security.
-
-        No mouse actions will be executed \
-        without your permission.
-        """
-
-        alert.addButton(
-            withTitle: "Open Privacy Settings"
-        )
-
-        alert.addButton(
-            withTitle: "Later"
-        )
-
-        alert.beginSheetModal(for: window) {
-            [weak self] response in
-
-            guard response == .alertFirstButtonReturn else {
-                return
-            }
-
-            Task { @MainActor [weak self] in
-                self?.openAccessibilitySettings()
-            }
-        }
-    }
-
-    // MARK: - Settings navigation
 
     func openAccessibilitySettings() {
-        let pane = AXIsProcessTrusted()
-            ? "Privacy_PostEvent"
-            : "Privacy_Accessibility"
-
-        let base =
-            "x-apple.systempreferences:" +
-            "com.apple.preference.security?"
-
-        guard let url = URL(string: base + pane) else {
-            return
-        }
-
-        if !NSWorkspace.shared.open(url),
-           let fallback = URL(
-                string: base + "Privacy_Accessibility"
-           ) {
-            NSWorkspace.shared.open(fallback)
-        }
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        ) else { return }
+        NSWorkspace.shared.open(url)
     }
-
-    // MARK: - Scheduler guards
 
     @discardableResult
     func requireForScheduling() -> Bool {
         guard refreshSilently() else {
+            requestNextMissingPermission()
             openAccessibilitySettings()
             return false
         }
-
         return true
     }
 
