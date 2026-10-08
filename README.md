@@ -2,7 +2,7 @@
 
 A compact native macOS utility that schedules **one left mouse click** at a screen position and time chosen by the user.
 
-**Status:** Free for noncommercial use and free sharing under the license below. The repository is currently private; a public notarized installer is not yet available.
+**Status:** Free for noncommercial use and sharing under the license below. Builds made from this repository are not Apple Developer ID notarized.
 
 ## Features
 
@@ -36,7 +36,33 @@ bash scripts/install-local-app.sh
 open "$HOME/Applications/Mac Action Scheduler.app"
 ```
 
-The installation script uses a **local signing identity** for developer builds. If you do not already have the expected local identity, read `scripts/setup-local-signing.sh` before using it. Self-signed local signing is **not** equivalent to Apple Developer ID distribution or notarization. This repository does not currently provide a universal public installer.
+The installation script uses a **local signing identity** for developer builds. If you do not already have the expected local identity, read `scripts/setup-local-signing.sh` before using it. This local identity is **not** an Apple Developer ID certificate.
+
+## Free distribution (Intel + Apple Silicon)
+
+On a Mac with the Swift 6.3 toolchain and Xcode command-line tools, build a Universal macOS package:
+
+```bash
+swift test
+MAS_UNIVERSAL=1 bash scripts/build-app.sh
+bash scripts/create-dmg.sh
+```
+
+The resulting `dist/Mac-Action-Scheduler-0.2.0-macOS-universal.dmg` contains the app, a drag-to-Applications shortcut, `INSTALL.txt`, README and LICENSE. The script prints a SHA-256 checksum. The usual `bash scripts/build-app.sh` remains a native-architecture local build.
+
+```bash
+lipo -archs "dist/Mac Action Scheduler.app/Contents/MacOS/MacActionScheduler"
+```
+
+A Universal build must report both `arm64` and `x86_64`. The Intel slice can be tested on an Intel Mac; the Apple Silicon slice requires testing on an Apple Silicon Mac.
+
+### First launch on another Mac
+
+The free package is **not Apple-notarized** and does not use an Apple Developer ID certificate. macOS Gatekeeper may prevent the first launch. If you trust the origin and have verified the download, try opening the app, then use **System Settings → Privacy & Security → Open Anyway** if offered. Never disable Gatekeeper system-wide. Grant the requested Accessibility and synthetic click permissions only if you understand what the app does.
+
+For official guidance see [Apple: Safely open apps on your Mac](https://support.apple.com/102445).
+
+To share a DMG, attach it to a GitHub Release (the repository must be public for non-collaborators to download it), or use your preferred file-sharing service. Include the SHA-256 hash and keep README/LICENSE with the app.
 
 ## Usage and limitations
 
