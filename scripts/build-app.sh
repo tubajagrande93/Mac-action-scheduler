@@ -6,10 +6,10 @@ cd "$(dirname "$0")/.."
 APP_NAME="Mac Action Scheduler"
 BUNDLE_ID="com.ntstudio.MacActionScheduler"
 
-echo "Building Swift application..."
-swift build -c debug --product MacActionScheduler
+echo "Building optimized Swift application (release)..."
+swift build -c release --product MacActionScheduler
 
-BIN_DIR="$(swift build -c debug --show-bin-path)"
+BIN_DIR="$(swift build -c release --show-bin-path)"
 APP="$PWD/dist/$APP_NAME.app"
 
 echo "Creating macOS app bundle..."
