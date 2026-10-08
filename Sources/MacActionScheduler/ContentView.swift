@@ -7,15 +7,10 @@ private enum DateMode {
     case custom
 }
 
-private struct ScheduledAction {
-    let fireDate: Date
-    let cancel: () -> Void
-}
-
 struct ContentView: View {
+    @ObservedObject var scheduler: ClickScheduler
     @State private var selectedPoint: CGPoint?
     @State private var pickerController: CoordinatePickerController?
-    @State private var activeSchedule: ScheduledAction?
 
     @State private var dateMode: DateMode = .today
     @State private var selectedDate = Date()
@@ -169,7 +164,7 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 Button {
-                    // Scheduler engine connects in the next step.
+                    scheduleClick()
                 } label: {
                     Text("Schedule Click")
                         .font(OpenAIFont.font(.semibold, size: 13))
@@ -205,7 +200,7 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 10)
                 )
                 .overlay(alignment: .trailing) {
-                    if activeSchedule != nil {
+                    if scheduler.canCancel {
                         Button {
                             cancelActiveSchedule()
                         } label: {
@@ -451,13 +446,19 @@ struct ContentView: View {
     }
 
     private var canSchedule: Bool {
-        selectedPoint != nil &&
-        (scheduledDateTime.map { $0 > Date() } ?? false)
+        selectedPoint != nil && !scheduler.hasPendingClick &&
+        (scheduledDateTime.map { ClickTimingPolicy.isInFuture($0, now: Date()) } ?? false)
     }
 
     private var scheduleStatus: String {
-        if activeSchedule != nil {
-            return "SCHEDULED"
+        switch scheduler.state {
+        case .scheduled: return "SCHEDULED"
+        case .sending: return "SENDING CLICK"
+        case .sent: return "CLICK SENT"
+        case .cancelled: return "CANCELLED"
+        case .missed: return "MISSED (MAC WAS ASLEEP)"
+        case .failed: return "FAILED"
+        case .idle: break
         }
 
         guard let scheduledDateTime else {
@@ -470,7 +471,7 @@ struct ContentView: View {
     }
 
     private var schedulePreview: String {
-        if let job = activeSchedule {
+        if let job = scheduler.lastJob, shouldShowLastJob {
             let calendar = Calendar.current
             let date = job.fireDate
 
@@ -515,14 +516,20 @@ struct ContentView: View {
         }
     }
 
-    // MARK: Schedule Cancellation
+    // MARK: Schedule Engine
+
+    private var shouldShowLastJob: Bool {
+        if case .idle = scheduler.state { return false }
+        return true
+    }
+
+    private func scheduleClick() {
+        guard let point = selectedPoint, let time = scheduledDateTime else { return }
+        _ = scheduler.schedule(point: point, at: time)
+    }
 
     private func cancelActiveSchedule() {
-        guard let job = activeSchedule else { return }
-
-        // Cancel the actual scheduled operation first.
-        job.cancel()
-        activeSchedule = nil
+        scheduler.cancel()
     }
 
     // MARK: Coordinate Picker
