@@ -167,8 +167,11 @@ struct ContentView: View {
 
             VStack(spacing: 8) {
                 Button {
-                    if permissions.snapshot.ready {
-                        scheduleClick()
+                    // Never act on a stale permission snapshot.
+                    if permissions.refreshSilently() {
+                        if permissions.snapshot.ready {
+                            scheduleClick()
+                        }
                     } else {
                         permissions.openAccessibilitySettings()
                     }
