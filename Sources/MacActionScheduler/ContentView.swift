@@ -7,9 +7,15 @@ private enum DateMode {
     case custom
 }
 
+private struct ScheduledAction {
+    let fireDate: Date
+    let cancel: () -> Void
+}
+
 struct ContentView: View {
     @State private var selectedPoint: CGPoint?
     @State private var pickerController: CoordinatePickerController?
+    @State private var activeSchedule: ScheduledAction?
 
     @State private var dateMode: DateMode = .today
     @State private var selectedDate = Date()
@@ -198,6 +204,24 @@ struct ContentView: View {
                 .clipShape(
                     RoundedRectangle(cornerRadius: 10)
                 )
+                .overlay(alignment: .trailing) {
+                    if activeSchedule != nil {
+                        Button {
+                            cancelActiveSchedule()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 26, height: 26)
+                                .background(Color.primary.opacity(0.07))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Cancel scheduled click")
+                        .accessibilityLabel("Cancel scheduled click")
+                        .padding(.trailing, 10)
+                    }
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.bottom, 12)
@@ -432,6 +456,10 @@ struct ContentView: View {
     }
 
     private var scheduleStatus: String {
+        if activeSchedule != nil {
+            return "SCHEDULED"
+        }
+
         guard let scheduledDateTime else {
             return "INVALID TIME"
         }
@@ -442,6 +470,30 @@ struct ContentView: View {
     }
 
     private var schedulePreview: String {
+        if let job = activeSchedule {
+            let calendar = Calendar.current
+            let date = job.fireDate
+
+            let label: String
+            if calendar.isDateInToday(date) {
+                label = "Today"
+            } else if calendar.isDateInTomorrow(date) {
+                label = "Tomorrow"
+            } else {
+                label = date.formatted(
+                    .dateTime.day().month(.abbreviated).year()
+                )
+            }
+
+            let time = String(
+                format: "%02d:%02d",
+                calendar.component(.hour, from: date),
+                calendar.component(.minute, from: date)
+            )
+
+            return "\(label) · \(time)"
+        }
+
         let time = String(
             format: "%02d:%02d",
             selectedHour,
@@ -461,6 +513,16 @@ struct ContentView: View {
             )
             return "\(date) · \(time)"
         }
+    }
+
+    // MARK: Schedule Cancellation
+
+    private func cancelActiveSchedule() {
+        guard let job = activeSchedule else { return }
+
+        // Cancel the actual scheduled operation first.
+        job.cancel()
+        activeSchedule = nil
     }
 
     // MARK: Coordinate Picker

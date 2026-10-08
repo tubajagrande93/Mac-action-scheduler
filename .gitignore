@@ -16,3 +16,6 @@ Sources/MacActionScheduler/Resources/Fonts/*
 !Sources/MacActionScheduler/Resources/Fonts/.keep
 
 *.backup
+dist/
+
+.local-backups/

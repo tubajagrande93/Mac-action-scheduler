@@ -34,6 +34,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.window = window
 
         NSApp.activate(ignoringOtherApps: true)
+
+        // Preflight before any automation can be scheduled.
+        AccessibilityPermissionService.shared.checkAtStartup(in: window)
+    }
+
+    func applicationDidBecomeActive(
+        _ notification: Notification
+    ) {
+        // Refresh silently when returning from System Settings.
+        AccessibilityPermissionService.shared.refreshSilently()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(
