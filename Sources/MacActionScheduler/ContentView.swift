@@ -1,25 +1,33 @@
-import AppKit
 import SwiftUI
+import AppKit
 
-private enum DateMode {
+private enum ScheduleDayChoice: String, CaseIterable {
     case today
     case tomorrow
     case custom
+
+    var title: String {
+        switch self {
+        case .today: return "Today"
+        case .tomorrow: return "Tomorrow"
+        case .custom: return "Select date"
+        }
+    }
 }
 
 struct ContentView: View {
     @ObservedObject var scheduler: ClickScheduler
     @ObservedObject private var permissions = AccessibilityPermissionService.shared
+    @Environment(\.colorScheme) private var colorScheme
+
     @State private var selectedPoint: CGPoint?
     @State private var pickerController: CoordinatePickerController?
 
-    @State private var dateMode: DateMode = .today
-    @State private var selectedDate = Date()
-    @State private var showCalendar = false
-    @State private var openTimePicker: String?
+    @State private var selectedDay: ScheduleDayChoice = .today
+    @State private var customDate = Date()
 
-    @State private var selectedHour: Int
-    @State private var selectedMinute: Int
+    @State private var hour: Int
+    @State private var minute: Int
 
     init(scheduler: ClickScheduler) {
         self.scheduler = scheduler
@@ -27,147 +35,137 @@ struct ContentView: View {
         let initial = Date().addingTimeInterval(300)
         let calendar = Calendar.current
 
-        _selectedHour = State(
-            initialValue: calendar.component(.hour, from: initial)
-        )
-        _selectedMinute = State(
-            initialValue: calendar.component(.minute, from: initial)
-        )
+        _hour = State(initialValue: calendar.component(.hour, from: initial))
+        _minute = State(initialValue: calendar.component(.minute, from: initial))
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            ChatGPTTheme.page(colorScheme)
+                .ignoresSafeArea()
 
-            // MARK: Header
-
-            VStack(spacing: 3) {
-                Text("Mac Action Scheduler")
-                    .font(OpenAIFont.font(.semibold, size: 22))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.9)
-
-                Text("Simple native macOS automation.")
-                    .font(OpenAIFont.font(.regular, size: 12))
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 8)
-            .padding(.bottom, 8)
-
-            Divider()
-
-            // MARK: Target
-
-            VStack(spacing: 9) {
-                Label("Target", systemImage: "scope")
-                    .font(OpenAIFont.font(.semibold, size: 15))
-
-                HStack(spacing: 18) {
-                    coordinateValue("X", value: selectedPoint?.x)
-
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.12))
-                        .frame(width: 1, height: 18)
-
-                    coordinateValue("Y", value: selectedPoint?.y)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 22) {
+                    headerSection
+                    divider
+                    targetCard
+                    scheduleCard
+                    statusCard
                 }
-                .frame(maxWidth: .infinity)
-                .frame(height: 36)
-                .background(Color.primary.opacity(0.055))
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 10)
-                )
+                .padding(30)
+                .frame(maxWidth: 760)
+            }
+        }
+        .background(ChatGPTTheme.window(colorScheme))
+    }
+
+    private var headerSection: some View {
+        VStack(spacing: 10) {
+            Text("Mac Action Scheduler")
+                .font(.system(size: 34, weight: .bold))
+                .foregroundStyle(ChatGPTTheme.text(colorScheme))
+
+            Text("Simple native macOS automation.")
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+        }
+        .padding(.top, 8)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(ChatGPTTheme.divider(colorScheme))
+            .frame(height: 1)
+    }
+
+    private var targetCard: some View {
+        card {
+            VStack(alignment: .leading, spacing: 18) {
+                sectionTitle(icon: "scope", text: "Target")
+
+                HStack(spacing: 14) {
+                    coordinateField(label: "X:", value: selectedPoint.map { Int($0.x) })
+                    coordinateField(label: "Y:", value: selectedPoint.map { Int($0.y) })
+                }
 
                 Button {
                     selectPoint()
                 } label: {
-                    Label(
-                        "Select Point",
-                        systemImage: "cursorarrow.click.2"
-                    )
+                    HStack(spacing: 12) {
+                        Image(systemName: "cursorarrow.rays")
+                            .font(.system(size: 19, weight: .medium))
+                        Text("Select Point")
+                            .font(.system(size: 18, weight: .medium))
+                    }
+                    .foregroundStyle(ChatGPTTheme.secondaryText(colorScheme))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 32)
-                    .background(Color.primary.opacity(0.07))
-                    .clipShape(Capsule())
+                    .frame(height: 62)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(ChatGPTTheme.secondaryFill(colorScheme))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                            )
+                    )
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.top, 10)
+        }
+    }
 
-            // MARK: Schedule
+    private var scheduleCard: some View {
+        card {
+            VStack(alignment: .leading, spacing: 20) {
+                sectionTitle(icon: "clock", text: "Schedule")
 
-            VStack(spacing: 10) {
-                Label("Schedule", systemImage: "clock")
-                    .font(OpenAIFont.font(.semibold, size: 15))
-
-                HStack(spacing: 7) {
-                    datePill("Today", mode: .today)
-                    datePill("Tomorrow", mode: .tomorrow)
-
-                    datePill("Select date", mode: .custom)
-                        .popover(
-                            isPresented: $showCalendar,
-                            arrowEdge: .bottom
-                        ) {
-                            DatePicker(
-                                "Choose date",
-                                selection: $selectedDate,
-                                in: Date()...,
-                                displayedComponents: .date
-                            )
-                            .datePickerStyle(.graphical)
-                            .labelsHidden()
-                            .padding(14)
-                            .onChange(of: selectedDate) { _, _ in
-                                showCalendar = false
-                            }
-                        }
+                HStack(spacing: 12) {
+                    dayPill(.today)
+                    dayPill(.tomorrow)
+                    dayPill(.custom)
                 }
 
-                VStack(spacing: 0) {
-                    Text("Time")
-                        .font(OpenAIFont.font(.medium, size: 12))
-                        .foregroundStyle(.secondary)
-
-                    HStack(alignment: .top, spacing: 8) {
-                        timeMenu(
-                            value: selectedHour,
-                            title: "HOURS",
-                            range: 0..<24
-                        ) { value in
-                            selectedHour = value
-                        }
-
-                        Text(":")
-                            .font(OpenAIFont.font(.semibold, size: 22))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 12, height: 34)
-
-                        timeMenu(
-                            value: selectedMinute,
-                            title: "MINUTES",
-                            range: 0..<60
-                        ) { value in
-                            selectedMinute = value
-                        }
-                    }
-                    .frame(
-                        maxWidth: .infinity,
-                        alignment: .center
+                if selectedDay == .custom {
+                    DatePicker(
+                        "Date",
+                        selection: $customDate,
+                        displayedComponents: [.date]
                     )
-                    .padding(.top, 12)
+                    .datePickerStyle(.compact)
+                    .foregroundStyle(ChatGPTTheme.text(colorScheme))
                 }
-            }
-            .padding(.top, 12)
-            .frame(maxWidth: .infinity)
 
-            Spacer(minLength: 8)
+                Rectangle()
+                    .fill(ChatGPTTheme.divider(colorScheme))
+                    .frame(height: 1)
 
-            // MARK: Action and Status
+                Text("Time")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
 
-            VStack(spacing: 8) {
+                HStack(alignment: .center, spacing: 18) {
+                    timePicker(
+                        value: $hour,
+                        range: 0..<24,
+                        label: "HOURS"
+                    )
+
+                    Text(":")
+                        .font(.system(size: 34, weight: .medium))
+                        .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                        .padding(.top, -8)
+
+                    timePicker(
+                        value: $minute,
+                        range: 0..<60,
+                        label: "MINUTES"
+                    )
+                }
+                .frame(maxWidth: .infinity)
+
                 Button {
-                    // Never act on a stale permission snapshot.
                     if permissions.refreshSilently() {
                         if permissions.snapshot.ready {
                             scheduleClick()
@@ -177,385 +175,293 @@ struct ContentView: View {
                     }
                 } label: {
                     Text(permissions.snapshot.ready ? "Schedule Click" : "Open Permissions")
-                        .font(OpenAIFont.font(.semibold, size: 13))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(
-                            (permissions.snapshot.ready && !canSchedule) ? Color.primary : Color.white
+                            canSchedule || !permissions.snapshot.ready
+                            ? ChatGPTTheme.primaryText(colorScheme)
+                            : ChatGPTTheme.muted(colorScheme)
                         )
-                        .frame(width: 174, height: 34)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 62)
                         .background(
-                            (!permissions.snapshot.ready || canSchedule)
-                                ? Color.accentColor
-                                : Color.primary.opacity(0.10)
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(
+                                    canSchedule || !permissions.snapshot.ready
+                                    ? ChatGPTTheme.primaryFill(colorScheme)
+                                    : ChatGPTTheme.secondaryFill(colorScheme)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                                )
                         )
-                        .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .disabled(permissions.snapshot.ready && !canSchedule)
-                .padding(.bottom, 16)
+            }
+        }
+    }
 
-                VStack(spacing: 2) {
-                    Text(scheduleStatus)
-                        .font(OpenAIFont.font(.medium, size: 10))
-                        .foregroundStyle(.secondary)
+    private var statusCard: some View {
+        HStack(spacing: 12) {
+            VStack(spacing: 6) {
+                Text(scheduleStatusTitle)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                    .textCase(.uppercase)
 
-                    Text(schedulePreview)
-                        .font(OpenAIFont.font(.medium, size: 12))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(Color.primary.opacity(0.045))
-                .clipShape(
-                    RoundedRectangle(cornerRadius: 10)
-                )
-                .overlay(alignment: .trailing) {
-                    if scheduler.canCancel {
-                        Button {
-                            cancelActiveSchedule()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 26, height: 26)
-                                .background(Color.primary.opacity(0.07))
-                                .clipShape(Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .help("Cancel scheduled click")
-                        .accessibilityLabel("Cancel scheduled click")
-                        .padding(.trailing, 10)
-                    }
-                }
+                Text(scheduleStatusSubtitle)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(ChatGPTTheme.text(colorScheme))
+                    .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity)
-            .padding(.bottom, 12)
+
+            if scheduler.canCancel {
+                Button {
+                    cancelActiveSchedule()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(ChatGPTTheme.secondaryFill(colorScheme))
+                        )
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, 20)
-        .font(OpenAIFont.font(.regular, size: 14))
-        .frame(
-            width: 360,
-            height: 450,
-            alignment: .top
+        .padding(.vertical, 18)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(ChatGPTTheme.card(colorScheme))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                )
         )
     }
 
-    // MARK: Coordinates
-
-    private func coordinateValue(
-        _ axis: String,
-        value: CGFloat?
-    ) -> some View {
-        HStack(spacing: 7) {
-            Text("\(axis):")
-                .foregroundStyle(.secondary)
-
-            Text(
-                value.map {
-                    String(Int($0.rounded()))
-                } ?? "—"
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .padding(22)
+            .background(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .fill(ChatGPTTheme.card(colorScheme))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                    )
             )
-            .monospacedDigit()
-            .font(OpenAIFont.font(.medium, size: 14))
-            .frame(minWidth: 44)
+    }
+
+    private func sectionTitle(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(ChatGPTTheme.text(colorScheme))
+
+            Text(text)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(ChatGPTTheme.text(colorScheme))
         }
     }
 
-    // MARK: Date Selection
+    private func coordinateField(label: String, value: Int?) -> some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(ChatGPTTheme.muted(colorScheme))
 
-    private func datePill(
-        _ title: String,
-        mode: DateMode
-    ) -> some View {
-        let active = dateMode == mode
+            Text(value.map(String.init) ?? "—")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(ChatGPTTheme.text(colorScheme))
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 68)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(ChatGPTTheme.softField(colorScheme))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                )
+        )
+    }
+
+    private func dayPill(_ day: ScheduleDayChoice) -> some View {
+        let isSelected = selectedDay == day
 
         return Button {
-            dateMode = mode
-
-            switch mode {
-            case .today:
-                selectedDate = Date()
-                showCalendar = false
-
-            case .tomorrow:
-                selectedDate = Calendar.current.date(
-                    byAdding: .day,
-                    value: 1,
-                    to: Date()
-                ) ?? Date()
-                showCalendar = false
-
-            case .custom:
-                showCalendar = true
-            }
+            selectedDay = day
         } label: {
-            HStack(spacing: 4) {
-                if active {
+            HStack(spacing: 8) {
+                if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(
-                            size: 10,
-                            weight: .bold
-                        ))
+                        .font(.system(size: 14, weight: .bold))
                 }
 
-                Text(title)
-                    .font(OpenAIFont.font(.medium, size: 12))
-                    .lineLimit(1)
+                Text(day.title)
+                    .font(.system(size: 17, weight: .medium))
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 34)
             .foregroundStyle(
-                active ? Color.white : Color.primary
+                isSelected
+                ? ChatGPTTheme.selectedPillText(colorScheme)
+                : ChatGPTTheme.secondaryText(colorScheme)
             )
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
             .background(
-                active
-                    ? Color.accentColor
-                    : Color.primary.opacity(0.055)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        isSelected
+                        ? ChatGPTTheme.selectedPillFill(colorScheme)
+                        : ChatGPTTheme.secondaryFill(colorScheme)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                    )
             )
-            .clipShape(Capsule())
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: Hours / Minutes
-
-    private func timeMenu(
-        value: Int,
-        title: String,
+    private func timePicker(
+        value: Binding<Int>,
         range: Range<Int>,
-        onSelect: @escaping (Int) -> Void
+        label: String
     ) -> some View {
-
-        let isOpen = Binding<Bool>(
-            get: {
-                openTimePicker == title
-            },
-            set: { showing in
-                if !showing {
-                    openTimePicker = nil
-                }
-            }
-        )
-
-        return VStack(spacing: 4) {
-
-            Button {
-                openTimePicker = title
-            } label: {
-                HStack(spacing: 8) {
-                    Text(String(format: "%02d", value))
-                        .font(OpenAIFont.font(.medium, size: 22))
-                        .monospacedDigit()
-
-                    Image(systemName: "chevron.down")
-                        .font(.system(
-                            size: 10,
-                            weight: .semibold
-                        ))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(width: 100, height: 34)
-                .background(
-                    Color.primary.opacity(0.055)
-                )
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .popover(
-                isPresented: isOpen,
-                arrowEdge: .bottom
-            ) {
-                ScrollView {
-                    LazyVGrid(
-                        columns: Array(
-                            repeating: GridItem(
-                                .fixed(40),
-                                spacing: 6
-                            ),
-                            count: 6
-                        ),
-                        spacing: 6
-                    ) {
-                        ForEach(range, id: \.self) { number in
-                            Button {
-                                onSelect(number)
-                                openTimePicker = nil
-                            } label: {
-                                Text(
-                                    String(
-                                        format: "%02d",
-                                        number
-                                    )
-                                )
-                                .font(
-                                    OpenAIFont.font(
-                                        .medium,
-                                        size: 13
-                                    )
-                                )
-                                .foregroundStyle(
-                                    number == value
-                                        ? Color.white
-                                        : Color.primary
-                                )
-                                .frame(width: 40, height: 34)
-                                .background(
-                                    number == value
-                                        ? Color.accentColor
-                                        : Color.primary.opacity(0.055)
-                                )
-                                .clipShape(
-                                    RoundedRectangle(
-                                        cornerRadius: 8
-                                    )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Picker("", selection: value) {
+                    ForEach(Array(range), id: \.self) { item in
+                        Text(String(format: "%02d", item)).tag(item)
                     }
-                    .padding(12)
                 }
-                .frame(
-                    width: 302,
-                    height: title == "HOURS" ? 184 : 242
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(width: 150, height: 58)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(ChatGPTTheme.text(colorScheme))
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(ChatGPTTheme.softField(colorScheme))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(ChatGPTTheme.border(colorScheme), lineWidth: 1)
+                        )
                 )
             }
 
-            Text(title)
-                .font(OpenAIFont.font(.medium, size: 10))
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    // MARK: Date Calculation
-
-    private var effectiveDate: Date {
-        switch dateMode {
-        case .today:
-            return Date()
-
-        case .tomorrow:
-            return Calendar.current.date(
-                byAdding: .day,
-                value: 1,
-                to: Date()
-            ) ?? Date()
-
-        case .custom:
-            return selectedDate
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(ChatGPTTheme.muted(colorScheme))
+                .tracking(0.5)
         }
     }
 
     private var scheduledDateTime: Date? {
-        Calendar.current.date(
-            bySettingHour: selectedHour,
-            minute: selectedMinute,
-            second: 0,
-            of: effectiveDate
-        )
+        let calendar = Calendar.current
+        let baseDate: Date
+
+        switch selectedDay {
+        case .today:
+            baseDate = Date()
+        case .tomorrow:
+            baseDate = calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        case .custom:
+            baseDate = customDate
+        }
+
+        var components = calendar.dateComponents([.year, .month, .day], from: baseDate)
+        components.hour = hour
+        components.minute = minute
+        components.second = 0
+
+        return calendar.date(from: components)
     }
 
     private var canSchedule: Bool {
-        selectedPoint != nil && !scheduler.hasPendingClick &&
-        (scheduledDateTime.map { ClickTimingPolicy.isInFuture($0, now: Date()) } ?? false)
+        guard let selectedPoint, let scheduledDateTime else { return false }
+        return permissions.snapshot.ready &&
+        !scheduler.hasPendingClick &&
+        ClickTimingPolicy.isInFuture(scheduledDateTime, now: Date()) &&
+        MouseClickService.isOnConnectedScreen(selectedPoint)
     }
 
-    private var scheduleStatus: String {
-        switch scheduler.state {
-        case .scheduled: return "SCHEDULED"
-        case .sending: return "SENDING CLICK"
-        case .sent: return "CLICK SENT"
-        case .cancelled: return "CANCELLED"
-        case .missed: return "MISSED (MAC WAS ASLEEP)"
-        case .failed: return "FAILED"
-        case .idle: break
-        }
-
+    private var scheduleStatusTitle: String {
         if !permissions.snapshot.ready {
             return "PERMISSIONS REQUIRED"
         }
 
-        guard let scheduledDateTime else {
-            return "INVALID TIME"
+        switch scheduler.state {
+        case .idle:
+            return "READY"
+        case .scheduled:
+            return "SCHEDULED"
+        case .sending:
+            return "SENDING CLICK"
+        case .sent:
+            return "CLICK SENT"
+        case .cancelled:
+            return "CANCELLED"
+        case .missed:
+            return "MISSED"
+        case .failed:
+            return "FAILED"
         }
-
-        return scheduledDateTime <= Date()
-            ? "TIME HAS PASSED"
-            : "NOT SCHEDULED"
     }
 
-    private var schedulePreview: String {
-        if case .idle = scheduler.state, !permissions.snapshot.ready {
+    private var scheduleStatusSubtitle: String {
+        if !permissions.snapshot.ready {
             return permissions.snapshot.missingDescription
         }
 
-        if let job = scheduler.lastJob, shouldShowLastJob {
-            let calendar = Calendar.current
-            let date = job.fireDate
-
-            let label: String
-            if calendar.isDateInToday(date) {
-                label = "Today"
-            } else if calendar.isDateInTomorrow(date) {
-                label = "Tomorrow"
-            } else {
-                label = date.formatted(
-                    .dateTime.day().month(.abbreviated).year()
-                )
-            }
-
-            let time = String(
-                format: "%02d:%02d",
-                calendar.component(.hour, from: date),
-                calendar.component(.minute, from: date)
-            )
-
-            return "\(label) · \(time)"
-        }
-
-        let time = String(
-            format: "%02d:%02d",
-            selectedHour,
-            selectedMinute
-        )
-
-        switch dateMode {
-        case .today:
-            return "Today · \(time)"
-
-        case .tomorrow:
-            return "Tomorrow · \(time)"
-
-        case .custom:
-            let date = selectedDate.formatted(
-                .dateTime.day().month(.abbreviated).year()
-            )
-            return "\(date) · \(time)"
+        switch scheduler.state {
+        case .failed(let message):
+            return message
+        case .idle:
+            return formattedPreview(for: scheduledDateTime)
+        default:
+            return formattedPreview(for: scheduler.lastJob?.fireDate ?? scheduledDateTime)
         }
     }
 
-    // MARK: Schedule Engine
+    private func formattedPreview(for date: Date?) -> String {
+        guard let date else { return "Choose a time" }
 
-    private var shouldShowLastJob: Bool {
-        if case .idle = scheduler.state { return false }
-        return true
+        let calendar = Calendar.current
+        let time = String(
+            format: "%02d:%02d",
+            calendar.component(.hour, from: date),
+            calendar.component(.minute, from: date)
+        )
+
+        if calendar.isDateInToday(date) { return "Today · \(time)" }
+        if calendar.isDateInTomorrow(date) { return "Tomorrow · \(time)" }
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd.MM.yyyy · HH:mm"
+        return formatter.string(from: date)
     }
 
     private func scheduleClick() {
-        guard let point = selectedPoint, let time = scheduledDateTime else { return }
-        _ = scheduler.schedule(point: point, at: time)
+        guard let point = selectedPoint, let date = scheduledDateTime else { return }
+        _ = scheduler.schedule(point: point, at: date)
     }
 
     private func cancelActiveSchedule() {
         scheduler.cancel()
     }
 
-    // MARK: Coordinate Picker
-
     private func selectPoint() {
         guard pickerController == nil else { return }
 
-        let mainWindow = NSApp.keyWindow
+        let mainWindow = NSApp.keyWindow ?? NSApp.mainWindow
         let controller = CoordinatePickerController()
 
         pickerController = controller
@@ -567,7 +473,6 @@ struct ContentView: View {
             }
 
             pickerController = nil
-
             mainWindow?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
