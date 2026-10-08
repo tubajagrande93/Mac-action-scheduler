@@ -143,7 +143,7 @@ final class ClickScheduler: NSObject, ObservableObject {
                 return
             }
 
-            let posted = await MouseClickService.postLeftClick(at: job.point)
+            let posted = MouseClickService.postLeftClick(at: job.point)
             self.finish(
                 posted ? .sent : .failed("Could not create mouse events")
             )
